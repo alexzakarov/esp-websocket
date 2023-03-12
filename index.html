@@ -1,0 +1,232 @@
+<!DOCTYPE HTML><html>
+<head>
+  <title>ESP Web Server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0">
+  <link rel="icon" href="data:,">
+  <style>
+    .button {
+        background-color: aqua;
+        color: black;
+        font-family: 'Courier New', Courier, monospace;
+        width: 100px;
+        height: 100px;
+        border: 1px solid black;
+        border-radius: 10px;
+         touch-action: pan-x pan-y;
+        margin: 10px;
+        margin-top: 100px;
+    }
+    .block{
+        width:80%;
+        height: auto;
+         touch-action: pan-x pan-y;
+    }
+    html {font-family: Arial; display: inline-block; text-align: center;zoom:initial;touch-action:manipulation;}
+    h2 {font-size: 3.0rem;}
+    p {font-size: 3.0rem;}
+    body {max-width: 800px; margin:0px auto; padding-bottom: 25px;}
+    .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
+    .switch input {display: none}
+    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 6px}
+    .slider:before {position: absolute; content: ""; height: 52px; width: 52px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 3px}
+    input:checked+.slider {background-color: #b30000}
+    input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
+  </style>
+</head>
+<body>
+
+<h3>HPI BAJA Q32 Controller</h3>
+
+<table>
+    <tr>
+        <td><button class="button" id="forward" width="50" height="50" background="yellow" onlea disabled onpointerdown="forwarded()" onpointerleave="stopped()" onmousedown="return false" onselectstart="return false">Forward</button></td>
+        <td class="block"></td>
+        <td><button class="button" id="left" width="50" height="50" background="yellow" onlea disabled onpointerdown="lefted()" onpointerleave="straighted()" onmousedown="return false" onselectstart="return false">Left</button></td>
+        <td><button class="button" id="right" width="50" height="50" background="yellow" onlea disabled onpointerdown="righted()" onpointerleave="straighted()" onmousedown="return false" onselectstart="return false">Right</button></td>
+    </tr>
+</table>
+
+<div id="output"></div>
+      
+      
+      
+<script>
+
+const scrollCheck = document.querySelector("#scroll-check");
+const keyboardCheck = document.querySelector("#keyboard-check");
+
+document.addEventListener("keydown", function (e) {
+  if (
+    keyboardCheck.checked &&
+    e.ctrlKey &&
+    (e.keyCode == "61" ||
+      e.keyCode == "107" ||
+      e.keyCode == "173" ||
+      e.keyCode == "109" ||
+      e.keyCode == "187" ||
+      e.keyCode == "189")
+  ) {
+    e.preventDefault();
+  }
+});
+document.addEventListener(
+  "wheel",
+  function (e) {
+    if (scrollCheck.checked && e.ctrlKey) {
+      e.preventDefault();
+    }
+  },
+  {
+    passive: false
+  }
+);
+
+var url = "ws://192.168.4.1:1337/";
+var output;
+var button;
+var canvas;
+var context;
+
+// This is called when the page finishes loading
+
+// Assign page elements to variables
+var forward = document.getElementById("forward");
+var left = document.getElementById("left");
+var right = document.getElementById("right");
+var output = document.getElementById("output");
+
+
+// Connect to WebSocket server
+
+// Call this to connect to the WebSocket server
+
+// Connect to WebSocket server
+let websocket = new WebSocket(url);
+// Assign callbacks
+websocket.onopen = function(evt) { onOpen(evt) };
+websocket.onclose = function(evt) { onClose(evt) };
+websocket.onmessage = function(evt) { onMessage(evt) };
+websocket.onerror = function(evt) { onError(evt) };
+
+// Called when a WebSocket connection is established with the server
+function onOpen(evt) {
+
+    // Log connection state
+    console.log("Connected");
+    
+    // Enable button
+    forward.disabled = false;
+    
+    // Get the current state of the LED
+}
+
+// Called when the WebSocket connection is closed
+function onClose(evt) {
+
+    // Log disconnection state
+    console.log("Disconnected");
+    
+    // Disable button
+    button.disabled = true;
+    
+    // Try to reconnect after a few seconds
+    setTimeout(function() { wsConnect(url) }, 2000);
+}
+
+// Called when a message is received from the server
+function onMessage(evt) {
+
+    // Print out our received message
+    console.log("Received: " + evt.data);
+    
+    // Update circle graphic with LED state
+    switch(evt.data) {
+        case "0":
+            console.log("LED is off");
+            context.fillStyle = "black";
+            context.fill();
+            break;
+        case "1":
+            console.log("LED is on");
+            context.fillStyle = "red";
+            context.fill();
+            break;
+        default:
+            break;
+    }
+}
+
+// Called when a WebSocket error occurs
+function onError(evt) {
+    console.log("ERROR: " + evt.data);
+}
+
+var isForwardKeyDown = false
+var isServoKeyDown = false
+
+
+// Call the init function as soon as the page loads
+window.addEventListener('keydown',this.keydown,true);
+window.addEventListener("keyup", this.keyUp, true)
+function keydown(el) {
+    el.preventDefault();
+
+    var code = el.keyCode || el.which;
+    if (code == 38){
+        websocket.send("forward");
+    }
+    if (code == 37){
+        websocket.send("servoLeft");
+    }
+    if (code == 39){
+        websocket.send("servoRight");
+    }
+}
+function keyUp(el) {
+    el.preventDefault();
+    var code = el.keyCode || el.which;
+    if (code == 38) {
+        websocket.send("stop");
+    }
+    if (code == 37){
+        websocket.send("servoNormal");
+    }
+    if (code == 39){
+        websocket.send("servoNormal");
+    }
+    
+}
+
+function forwarded() {
+    websocket.send("forward");
+}
+
+function stopped() {
+    websocket.send("stop");
+}
+
+
+function lefted() {
+    websocket.send("servoLeft");
+}
+
+function righted() {
+    websocket.send("servoRight");
+}
+
+function straighted() {
+    websocket.send("servoNormal");
+}
+
+// Sends a message to the server (and prints it to the console)
+function doSend(message) {
+    console.log("Sending: " + message);
+    websocket.send(message);
+}
+
+
+
+</script>
+
+</body>
+</html>
